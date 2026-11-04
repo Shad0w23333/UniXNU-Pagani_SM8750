@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    runs-on: macos-26
+    runs-on: macos-26-intel
     timeout-minutes: 360
     defaults:
       run:
@@ -239,6 +239,8 @@ jobs:
           PY
           rustup toolchain install 1.98.0 --profile minimal
       - name: Verify Metal interfaces, compiler, heap reuse and scanout on the build host
+        # The existing verify_only workflow on main checks these artifacts on ARM64.
+        if: ${{ runner.arch == 'ARM64' }}
         working-directory: source/UniXNU
         run: |
           cd "$UNIXNU_TREE"
