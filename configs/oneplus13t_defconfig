@@ -28,7 +28,9 @@ CONFIG_XNU_OWNER_DATA_MOUNT=y
 # OWNER_DATA_VOLUME_UUID is set from the actual RAM seed before the build.
 CONFIG_XNU_OWNER_UNION_SYSTEMOS=y
 CONFIG_XNU_VERIFIED_ROOT_ARCHIVE="{tree}/build/verified-root-os-xnu-bundle/libVerifiedRootProbe.a"
-# CONFIG_XNU_NATIVE_ADRENO is not set
+# The A830 driver (Adreno830 plus the board glue and firmware of build-pagani-gpu.py); it runs only with pagani-gpu=1.
+CONFIG_XNU_NATIVE_ADRENO=y
+CONFIG_XNU_NATIVE_ADRENO_ARCHIVE="{tree}/build/adreno830/libAdreno830.a"
 CONFIG_XNU_NATIVE_LEGACY_DISPLAY=y
 CONFIG_XNU_BOOT_PROGRESS=y
 CONFIG_XNU_EARLY_BOOT_PROGRESS=y
@@ -39,3 +41,4 @@ CONFIG_XNU_NATIVE_AES_ARCHIVE="{tree}/build/native-aes/libNativeAES.a"
 CONFIG_XNU_NATIVE_VIRTIO_BLOCK_ARCHIVE="{tree}/build/native-virtio-block/libNativeVirtioBlock.a"
 CONFIG_XNU_NATIVE_RAM_BLOCK_ARCHIVE="{tree}/build/native-ram-block/libNativeRamBlock.a"
 # CONFIG_XNU_SOURCE_MOCKFS is not set
+CONFIG_XNU_EXTRA_LD_ARCHIVES="-Wl,-force_load,{tree}/build/pagani-audio/libPaganiAudio.a"

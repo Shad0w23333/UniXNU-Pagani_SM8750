@@ -22,14 +22,28 @@ modules = feeds.resolve(ctx)
 assert ctx.schema_version == 2
 assert list(ctx.profile_roots) == ['arch', 'soc', 'os', 'device']
 assert ctx.work.parts[-3:] == ('oneplus13t', 'ipados-17.7.11-21H461', 'oneplus13t')
-assert len(ctx.component_specs) == 18
+# The 18 Stage 7 components, Adreno830 with its kits AdrenoPM4 and ArmSmmu4K, and AdrenoMetal (its accelerator ABI).
+assert len(ctx.component_specs) == 22
+assert {'Adreno830', 'AdrenoMetal', 'AdrenoPM4', 'ArmSmmu4K'} <= {spec['id'] for spec in ctx.component_specs}
+assert 'Adreno740' not in {spec['id'] for spec in ctx.component_specs}
+
+
+def pinned_by_superproject(path):
+    """The commit a UniXNU module submodule is pinned to; the catalog revision of some lags it."""
+    relative = path.resolve().relative_to(ROOT) if path.resolve().is_relative_to(ROOT) else None
+    if relative is None:
+        return None
+    entry = subprocess.check_output(['git', '-C', str(ROOT), 'ls-tree', 'HEAD', str(relative)], text=True).split()
+    return entry[2] if len(entry) > 2 and entry[1] == 'commit' else None
+
+
 for spec in ctx.component_specs:
     module = modules[spec['kind'], spec['id']]
     assert module.path is not None
     for source in spec.get('source_files', []):
         assert (module.path / source).is_file(), (spec['id'], source)
     revision = subprocess.check_output(['git', '-C', str(module.path), 'rev-parse', 'HEAD'], text=True).strip()
-    assert revision == spec['revision'], (spec['id'], revision, spec['revision'])
+    assert revision in (spec['revision'], pinned_by_superproject(module.path)), (spec['id'], revision, spec['revision'])
 assert all(m.path and m.path.is_dir() for m in modules.values() if m.kind != 'refer')
 assert len(patches.plan(ctx, modules)) == len(set(patches.plan(ctx, modules)))
 patches.prepare(ctx, modules)
@@ -237,4 +251,4 @@ except ValueError as error:
     assert 'components without an area' in str(error)
 else:
     raise AssertionError('Local records must cover the selected component dependencies')
-print('PASS: four profiles, 18 components, ordered archives, root policy and format-2 ADT contract')
+print('PASS: four profiles, 22 components (Adreno830 with its kits and AdrenoMetal), ordered archives, root policy and format-2 ADT contract')
