@@ -279,17 +279,18 @@ evidence = [
 
 [[area]]
 id = "gpu"
-status = "implemented"
-components = ["Adreno830", "AdrenoMetal", "AdrenoPM4", "ArmSmmu4K"]
+status = "device-verified"
+components = ["Adreno830", "AdrenoMetal", "AdrenoPM4", "ArmSmmu4K", "Adreno740", "AdrenoFirmware", "Sm8550Platform"]
 paths = ["board.toml", "dts/oneplus13t.dts", "configs/oneplus13t_defconfig", "package/PaganiGpuBoard.cpp", "package/PaganiGpuInputs.h", "scripts/build-pagani-gpu.py", "scripts/prepare-pagani-gpu-inputs.py", "scripts/test-gpu-inputs.py", "scripts/data/sm8750-gpu-inputs.json"]
 inputs = ["PKX110 Android runtime DTB 运行中设备树.dtb (1427077 bytes, SHA-256 13b8b74a8dba343b96fd34910858f66501ce7ab4eb9ce2eec1787f55fc2ffe60, pinned in scripts/data/sm8750-gpu-inputs.json). It is not the author's capture d00767f2 in proprietary-files.txt. Its GPU values the UniXNU DTS does not carry (six qcom,gpu-pwrlevel-bins, the DDR/CNOC bus tables, the GMU frequency table, apps DRV-2, AOSS QMP, IPCC and TSENS windows, the SCM wait-queue interrupt, ACTLR, UBWC, the SoC ids) are normalised into scripts/data/sm8750-gpu-inputs.json runtime_dt with their SHA-256 52899bfa…6cd1; windows, interrupts, SIDs (0 user, 1 LPAC, 5 GMU), the SMMU interrupts (global SPI 674, 25 context banks), the qfprom speed-bin cell (0x138, 9 bits) and the LLCC windows now come from soc:dts/sm8750.dtsi and dts/oneplus13t.dts and are checked against the runtime DTB.", "GPU firmware from the PKX110 vendor backup, local only in .cache/firmware/pkx110-gpu: gen80000_gmu.bin 88896 bytes 1ad8175e…63a5, gen80000_sqe.fw 111892 bytes 9c8f009b…6b5, gen80000_aqe.fw 25340 bytes f04cb97e…ed20, gen80000_zap.mbn 12088 bytes 1aa7af12…3c43 (full pins in scripts/data/sm8750-gpu-inputs.json).", "Measured on PKX110: SMEM 0x81D00000 is readable only in the global partition [0x1000,0x9E000) and the partition table [0x1FF000,0x200000); SoC id 618; the gpucc-sm8750 power-up, SCM GPU_INIT_REGS and apps DRV-2 votes worked; the GPU SMMU global space is hypervisor-emulated (S2CR boot value 0x03000018, only ACTLR 0x303 sticks, CB registers random at boot).", "Adreno 830/SM8750 needs the Gen8 backend: catalog Adreno740 stays scoped to A740/SM8550; the source driver is the local Adreno830 component (Adreno830 docs/ARCHITECTURE.md, docs/IMPLEMENTATION_PLAN.md)."]
 configuration = ["board.toml selects Adreno830 (with AdrenoPM4, ArmSmmu4K, Sm8750Platform) and AdrenoMetal; [kernel] archives add component:Adreno830 and build-pagani-gpu.py; CONFIG_XNU_NATIVE_ADRENO=y force-loads build/adreno830/libAdreno830.a through CONFIG_XNU_NATIVE_ADRENO_ARCHIVE; [kernel.prelink] roots add com.apple.iokit.IOGPUFamily (S9 loads it for the staged AGXAccelerator).", "[payload] (M7-M9): size_mib 192 for the Data seed with the plugin and Turnip; kernel_args drop pagani-platform-status=1 and add pagani-gpu=1, sheng-gpu-addon=1, sheng-gpu-metal-opens=0 and sheng-fb-gpu=1. Per-milestone arguments (pagani-gpu-stop=N, pagani-gpu-status=2, pagani-gpu-perf=7, the M11 experiments) go on the payload command line with --kernel-arg, never into board.toml; --kernel-arg pagani-gpu=0 gives the CPU-composited image of before.", "dts/oneplus13t.dts adds the cmd-db, SMEM and GPU microcode reserved regions and enables the GPU, GMU, GPUCC, GPU SMMU, qfprom and LLCC nodes as generator inputs only; none carries unixnu,adt-name, so the ADT and arm-io are unchanged. soc:dts/sm8750.dtsi carries the GPU/GMU iommus, the SMMU interrupts, the qfprom speed-bin cell and the LLCC windows (disabled by default).", "Development sources: the ignored local.toml points sm8750 to ../UniXNU-sm8750-common, Adreno830 to ../Adreno830 and drivers/kits to the UniXNU-Pagani-Drivers fast-display work tree (Stage7Probe and BootProgress GPU hooks)."]
 procedure = ["C1: in Adreno830, python3 tests/run-host-tests.py --unixnu ../UniXNU --firmware ../UniXNU-Pagani_SM8750-gpu/.cache/firmware/pkx110-gpu.", "C2: python3 scripts/prepare-pagani-gpu-inputs.py --check (DTS plus the recorded runtime DT values; add --live-dtb <runtime DTB> to re-extract them, --record to pin a new capture); python3 scripts/test-gpu-inputs.py [--live-dtb <runtime DTB>].", "C3: from UniXNU, defconfig oneplus13t_defconfig -D ../UniXNU-Pagani_SM8750-gpu --out out-gpu (append the Data seed's CONFIG_XNU_OWNER_DATA_VOLUME_UUID), then kernel with --local-module driver:Adreno830=../Adreno830; check libAdreno830.a and kernel.macho with llvm-nm.", "C4: payload and bootimg with --kernel <out-gpu kernel.macho> and the milestone's --kernel-arg values (pagani-gpu-stop=N pagani-gpu-status=2 while bringing the stages up); temporary boot only after the user approves it."]
-findings = ["The stock DTB names the GPU Adreno830v2 but advertises qcom,adreno-gpu-gen8-0-1; the two strings are preserved as observed, without inferring a different GPU revision.", "The disabled DTS nodes record four GPU windows, two GMU windows, GPUCC and the separate GPU SMMU. No clock, power, firmware, SMMU or command operation is activated.", "The SpringBoard/input and eight-core candidates continue to use CPU framebuffer copies. Their hardware observations do not establish GPU/Metal acceleration.", "M0 (build integration): Adreno830 builds as a UniXNU kernel component (32 objects: the generation-independent NativeAdreno core, Adreno830Start/Status, Sm8750GpuPower, AdrenoPM4, ArmSmmu4K and the staged AGXAccelerator); build-pagani-gpu.py appends the strong pagani_gpu_start and the four gen80000 images after checking their pins. The kernel links and prelinks; kernel.macho defines _adreno830_start, _adreno830_status, _pagani_gpu_start (the board's strong definition, called from native_legacy_display_late_probe after PE_parse_boot_argn(\"pagani-gpu\")==1) and carries the four images page aligned in __DATA_CONST with their pinned sizes and SHA-256.", "The overlay rows are drawn by BootProgress on text rows 10-13 when they change. Until NativeLegacyDisplay skips boot_progress_gpu_band(), the first system frame overwrites them.", "Source (2026-10-29): adreno830_start runs S0..S10 of ARCHITECTURE 3.4 against the Gen8 modules (cmd-db, SMEM socinfo, speed-bin fuse and level table in S0; host votes and Sm8750GpuPowerOn in S1; GPU_INIT_REGS, CN0 and DDR in S2; the SMMU survey, bank resets, BO pool and the CB2/CB0 contexts with LPAC in S3; CX timer and firmware memory in S4; the GMU cold boot with up to three attempts, HFI, OOB and GX check in S5; CP, ZAP, self-test, publication and DCVS in S6-S10). Host doubles cover every stage, every injected module failure and the pagani-gpu-stop points; no stage has run on the phone yet."]
+findings = ["The UniXNU catalog resolves AdrenoMetal's dependencies to Adreno740, AdrenoFirmware and Sm8550Platform; this board builds Adreno830, Sm8750Platform and the gen80000 firmware in their place.", "The stock DTB names the GPU Adreno830v2 but advertises qcom,adreno-gpu-gen8-0-1; the two strings are preserved as observed, without inferring a different GPU revision.", "The disabled DTS nodes record four GPU windows, two GMU windows, GPUCC and the separate GPU SMMU. No clock, power, firmware, SMMU or command operation is activated.", "The SpringBoard/input and eight-core candidates continue to use CPU framebuffer copies. Their hardware observations do not establish GPU/Metal acceleration.", "M0 (build integration): Adreno830 builds as a UniXNU kernel component (32 objects: the generation-independent NativeAdreno core, Adreno830Start/Status, Sm8750GpuPower, AdrenoPM4, ArmSmmu4K and the staged AGXAccelerator); build-pagani-gpu.py appends the strong pagani_gpu_start and the four gen80000 images after checking their pins. The kernel links and prelinks; kernel.macho defines _adreno830_start, _adreno830_status, _pagani_gpu_start (the board's strong definition, called from native_legacy_display_late_probe after PE_parse_boot_argn(\"pagani-gpu\")==1) and carries the four images page aligned in __DATA_CONST with their pinned sizes and SHA-256.", "The overlay rows are drawn by BootProgress on text rows 10-13 when they change. Until NativeLegacyDisplay skips boot_progress_gpu_band(), the first system frame overwrites them.", "Source (2026-10-29): adreno830_start runs S0..S10 of ARCHITECTURE 3.4 against the Gen8 modules (cmd-db, SMEM socinfo, speed-bin fuse and level table in S0; host votes and Sm8750GpuPowerOn in S1; GPU_INIT_REGS, CN0 and DDR in S2; the SMMU survey, bank resets, BO pool and the CB2/CB0 contexts with LPAC in S3; CX timer and firmware memory in S4; the GMU cold boot with up to three attempts, HFI, OOB and GX check in S5; CP, ZAP, self-test, publication and DCVS in S6-S10). Host doubles cover every stage, every injected module failure and the pagani-gpu-stop points; no stage has run on the phone yet."]
 completion = ["GPU submissions complete, mapping/fence handling is correct, a known image renders, and the selected Metal client presents it."]
-limits = ["Nothing past M0 has been booted: S1 onwards (power, SCM, SMMU, GMU, CP, ZAP, interrupts, publication) is source and host-test only until the user runs the M1-M7 images one stage at a time (pagani-gpu-stop=N).", "The CPU presentation path reserves the GPU status band only with the local NativeMobileDisplay of the fast-display work tree.", "AdrenoMetal user space (plugin, Turnip, Data seed and owner trust) is built separately (IMPLEMENTATION_PLAN C6) and is a precondition of M7."]
-next_action = ["Build the GPU-line kernel with every Gen8 module in the archive, then boot pagani-gpu-stop=0..3 (M1) with pagani-gpu-status=2 when the user approves, photograph the overlay and record it here; continue stage by stage (M2-M7)."]
+limits = ["Pipelines still compile on first use inside the render server commit (about 1 s once per boot); single-buffer copy can tear; first runs after each boot are slower until the shader cache is harvested."]
+next_action = ["Harvest the pipeline cache on hardware, confirm the surface maintenance rule (no stale tiles), then measure the 8 GiB window and the compressor."]
 evidence = [
+  { kind = "device", reference = "https://github.com/Shad0w23333/Adreno830/blob/1a1321056ffc5428ae925f4680093718b46ca7c2/docs/PROGRESS.md", command = "python3 tools/gpu-test-loop/gpu-loop.py --image <stage image> --serial <device> --android-timeout 1200 --yes (UniXNU-OnePlus13T)", revision = "870457ebc0a5eb79cd4b0511c57c71b5489183f7", result = "2026-10-30 to 11-01, PKX110: the Adreno830 driver runs the iPadOS 17.7.11 desktop through Metal (metal2vulkan, Turnip); system apps, widgets and Control Center render, the user reports it near native. Run 20261101-110201: 16 GiB aperture, IOVA past 4 GiB, no GPU fault. Booted from the working tree just before this revision." },
   { kind = "device", reference = "STAGE6.md", command = "fastboot boot out/oneplus13t/boot/stage7-gpu-resources/boot.img; user observed UI and touch", revision = "830e21446dd45a1b8c0c7b350221ce60e87c2379", result = "The resource-only candidate reached the system UI with normal basic touch. Its GPU nodes remain disabled and were omitted from ADT, so this test provides no GPU power-up or rendering evidence. The DTS changes were committed after this test." },
   { kind = "source", reference = "proprietary-files.txt", result = "The recorded Android runtime DTB hash identifies the source for the disabled GPU/GMU/GPUCC/SMMU resource nodes and board chip ID." },
   { kind = "source", reference = "https://github.com/jjpprrrr/android_device_oneplus_sm8750-common/blob/l23.2/proprietary-files.txt", result = "Related SM8750 stock firmware list supplies candidate Gen8 filenames; PKX110 firmware is not pinned." },
@@ -300,38 +301,42 @@ evidence = [
 
 [[area]]
 id = "network"
-status = "planned"
-components = []
+status = "implemented"
+components = ["PaganiWifi", "PaganiBt"]
 paths = ["board.toml"]
-inputs = ["No verified Wi-Fi or cellular path is selected for PKX110."]
-configuration = ["No driver is enabled for this subsystem."]
-procedure = ["Follow the subsystem guide to identify hardware, firmware and ABI inputs before enabling a component."]
-findings = ["No verified Wi-Fi or cellular path is selected for PKX110.", "The SpringBoard candidate prepares an offline UI input test; the selected components contain no Wi-Fi, Bluetooth or cellular transport.", "The eight-core candidate enables no Wi-Fi, Bluetooth or network interface; connectivity remains unimplemented."]
+inputs = ["Wi-Fi: peach (17cb:110e) on PCIe0, firmware read in place from modem_a; Bluetooth: peach BT on QUP2 SE6 UART, firmware read in place from bluetooth_a."]
+configuration = ["pagani-wifi=1..6 (6 runs the Ath12kWifi stack and the network service); pagani-bt=N (40 stand-in, 48 real controller to bluetoothd). Both absent: nothing runs."]
+procedure = ["Wi-Fi rounds A, B, C, D with tools/gpu-test-loop/wifi-rounds.py of UniXNU-OnePlus13T; Bluetooth rounds in drivers/PaganiBt/README.md."]
+findings = ["Rails touch S7I, which also feeds UFS vccq: both drivers only raise it, never switch it off, and hold the UFS log writer around first accesses.", "wifid already runs on this system without a wlan node; the settings page path was checked against 21H461 statically."]
 completion = ["Scanning, association, address configuration and sustained receive/transmit traffic pass with the selected firmware."]
-limits = ["No implemented or hardware-verified path is available for this subsystem."]
-next_action = ["Identify the WLAN transport, firmware and IRQ/DMA requirements from the stock DTB before selecting a driver."]
+limits = ["Off by default; no boot argument for it has run on PKX110 yet, so every result is host-only."]
+next_action = ["Run Wi-Fi rounds A and B, then the stack rounds with a test network; Bluetooth with the stand-in first."]
 evidence = [
+  { kind = "host", reference = "https://github.com/Shad0w23333/UniXNU-Pagani-Drivers/tree/3d570b7653bf9831def8fe49b339b42990508d83/drivers/PaganiWifi", command = "python3 drivers/PaganiWifi/Test/check-pagani-wifi-host.py", revision = "3d570b7653bf9831def8fe49b339b42990508d83", result = "Host model of bring-up, MHI, firmware, RDDM and the apple80211 service passes; 72 mutants caught." },
+  { kind = "host", reference = "https://github.com/Shad0w23333/UniXNU-Pagani-Drivers/tree/3d570b7653bf9831def8fe49b339b42990508d83/drivers/PaganiBt", command = "python3 drivers/PaganiBt/Test/check-pagani-bt-host.py", revision = "3d570b7653bf9831def8fe49b339b42990508d83", result = "Host checks pass; the firmware download replays the Android hsuart trace for the bytes the trace kept; 217 mutants caught." },
 ]
 
 [[area]]
 id = "audio"
-status = "planned"
-components = []
+status = "implemented"
+components = ["PaganiAdsp", "PaganiAudio", "PaganiSpeaker", "PaganiHaptics"]
 paths = ["board.toml"]
-inputs = ["DSP/codec firmware interfaces, routes and playback/capture remain unimplemented."]
-configuration = ["No driver is enabled for this subsystem."]
-procedure = ["Follow the subsystem guide to identify hardware, firmware and ABI inputs before enabling a component."]
-findings = ["DSP/codec firmware interfaces, routes and playback/capture remain unimplemented.", "The merged OS identity adds the J120AP product-id and product/audio wireless-splitter metadata used by original services. No audio controller, codec or playback/capture backend is selected for this board.", "The eight-core candidate adds no DSP/codec route or audio backend; playback and capture remain unimplemented."]
+inputs = ["ADSP from modem_a through PAS, SMP2P, GLINK and QRTR; two TFA9873 amplifiers; the PMIH010x haptics; the PaganiAudio HAL plug-in in the Data seed."]
+configuration = ["pagani-adsp=1, pagani-speaker=1, pagani-audio=1, pagani-haptics=1, pagani-audio-srzl=7 (VirtualAudio haptics settings for J120)."]
+procedure = ["ADSP rounds with tools/gpu-test-loop/adsp-rounds.py of UniXNU-OnePlus13T; drivers/PaganiAudio/scripts/sound-verdict.py reads a run."]
+findings = ["On hardware the volume bar works but routing never initialised: VirtualAudio throws Invalid Product Type for J120 under the haptics node; pagani-audio-srzl bit 1 supplies the settings (host-tested only)."]
 completion = ["Each declared route carries the selected audio format through playback or capture and handles start/stop correctly."]
-limits = ["No implemented or hardware-verified path is available for this subsystem."]
-next_action = ["Map the DSP, codec, clock and firmware dependencies from the stock platform before implementing an audio route."]
+limits = ["The ADSP has never been started on PKX110; nothing has played yet."]
+next_action = ["Run the audio route round, then the ADSP rounds A1-B2, then the tone rounds with someone listening."]
 evidence = [
+  { kind = "host", reference = "https://github.com/Shad0w23333/UniXNU-Pagani-Drivers/tree/3d570b7653bf9831def8fe49b339b42990508d83/drivers/PaganiAdsp", command = "python3 -B drivers/PaganiAdsp/Test/check-pagani-adsp-host.py", revision = "3d570b7653bf9831def8fe49b339b42990508d83", result = "Host model of the ADSP bring-up passes." },
+  { kind = "host", reference = "https://github.com/Shad0w23333/UniXNU-Pagani-Drivers/tree/3d570b7653bf9831def8fe49b339b42990508d83/drivers/PaganiAudio", command = "python3 -B drivers/PaganiAudio/scripts/check-pagani-audio-host.py", revision = "3d570b7653bf9831def8fe49b339b42990508d83", result = "Plug-in and VirtualAudio settings checks pass against the 21H461 binary." },
 ]
 
 [[area]]
 id = "power"
 status = "host-verified"
-components = ["ShengPlatformPower"]
+components = ["ShengPlatformPower", "PaganiBattery"]
 paths = ["patches/xnu/pagani-bootstrap.patch", "package/PaganiPeripherals.h"]
 inputs = ["The component preserves the original Apple PMGR ABI and restricted boot-time operations."]
 configuration = ["XNU_SHENG_PMGR=y; sheng-pmgr=2; sleep-disabled=1."]
@@ -427,4 +432,36 @@ evidence = [
   { kind = "host", reference = "https://github.com/IssacL04/UniXNU-Pagani_SM8750/actions/runs/40174199304", command = "test-kernel-source.py; drivers/BootProgress/Test/panic-entry.py", revision = "af2ba2975a5f0f6dcedfdcc719a1c646876f5804", result = "Source-kernel regressions, early console compilation and panic-entry contract passed in CI; runtime checkpoints still require a hardware boot." },
   { kind = "source", reference = "board.toml", result = "Current format-2 selection and board policy." },
   { kind = "source", reference = "STAGE6.md", result = "Historical PKX110 observations through build 39; no claim of migrated-image hardware verification." },
+]
+
+[[area]]
+id = "sensors"
+status = "implemented"
+components = ["PaganiSensors"]
+paths = ["board.toml"]
+inputs = ["The sensor hub on the ADSP (SSC) over QRTR."]
+configuration = ["pagani-sensors=1..3; 2 and 3 need pagani-adsp=1."]
+procedure = ["Stage rounds in drivers/PaganiSensors/README.md."]
+findings = ["iOS sensor services publish; data needs the ADSP."]
+completion = ["Accelerometer, gyroscope and ambient light reach iOS with plausible values."]
+limits = ["Off by default; no boot argument for it has run on PKX110 yet, so every result is host-only."]
+next_action = ["Follow the ADSP rounds."]
+evidence = [
+  { kind = "host", reference = "https://github.com/Shad0w23333/UniXNU-Pagani-Drivers/tree/3d570b7653bf9831def8fe49b339b42990508d83/drivers/PaganiSensors", command = "python3 drivers/PaganiSensors/Test/check-pagani-sensors-host.py", revision = "3d570b7653bf9831def8fe49b339b42990508d83", result = "Host checks pass." },
+]
+
+[[area]]
+id = "camera"
+status = "implemented"
+components = ["PaganiCamera", "PaganiTorch"]
+paths = ["board.toml"]
+inputs = ["Telephoto S5KJN5 on CCI0, titan GDSC, camcc, MCLK0; the flash LED on PM8550."]
+configuration = ["pagani-cam=1..4 (survey to telephoto sensor ID); pagani-torch=1 and pagani-torch-ios=1 for the flashlight and the test pattern camera."]
+procedure = ["Camera levels 1-4 and the test pattern image in docs/测试清单.md of UniXNU-OnePlus13T."]
+findings = ["Without H6ISPCaptureDeviceCreate the capture device vendor is nil on 21H461, so the plug-in carries a correction for the flashlight and external cameras."]
+completion = ["The code scanner shows a test pattern; level 4 reads ID 0x38e5."]
+limits = ["Off by default; no boot argument for it has run on PKX110 yet, so every result is host-only.", "Before level 4 the parent rail of ldoi1 must be known (it may be S7I)."]
+next_action = ["Run camera levels 1-3, then the test pattern image."]
+evidence = [
+  { kind = "host", reference = "https://github.com/Shad0w23333/UniXNU-Pagani-Drivers/tree/3d570b7653bf9831def8fe49b339b42990508d83/drivers/PaganiCamera", command = "python3 -B drivers/PaganiCamera/Test/check-pagani-camera-host.py --tree <UniXNU tree>", revision = "3d570b7653bf9831def8fe49b339b42990508d83", result = "Host checks pass; 126 mutants caught." },
 ]
