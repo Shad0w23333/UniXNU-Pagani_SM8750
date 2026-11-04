@@ -5,7 +5,7 @@ name = "oneplus13t"
 soc = "SM8750"
 soc_source = "sm8750"
 os_profile = "ipados-17.7.11-21H461"
-description = "OnePlus 13T PKX110: Stage 7 early userspace and CPU display"
+description = "OnePlus 13T PKX110 with the native Adreno 830 GPU"
 kit = "oneplus13t"
 
 [ipsw]

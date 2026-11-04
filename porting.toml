@@ -4,7 +4,7 @@ schema_version = 1
 name = "oneplus13t"
 soc = "SM8750"
 os_profile = "ipados-17.7.11-21H461"
-summary = "OnePlus 13T PKX110: build 63 device-confirmed system startup and normal touch, CPU reg=8 online=8 T=ff I=ff, RAM 4096 MiB; Clutch single-pset, read-only UFS root; cross-core stress and long-term stability unqualified."
+summary = "OnePlus 13T PKX110: the native Adreno830 driver runs the iPadOS 17.7.11 desktop through Metal on hardware (system apps, widgets, Control Center); Wi-Fi, Bluetooth, audio, sensors and camera are implemented and host-tested but not yet booted; Data is a RAM disk."
 
 [[area]]
 id = "configuration"
